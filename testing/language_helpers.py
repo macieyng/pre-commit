@@ -19,6 +19,7 @@ def run_language(
         require_serial: bool = True,
         color: bool = False,
 ) -> tuple[int, bytes]:
+    """Run a hook command in the context of a specific language."""
     prefix = Prefix(str(path))
     version = version or language.get_default_version()
 
@@ -26,6 +27,7 @@ def run_language(
         language.install_environment(prefix, version, deps)
         health_error = language.health_check(prefix, version)
         assert health_error is None, health_error
+
     with language.in_env(prefix, version):
         ret, out = language.run_hook(
             prefix,

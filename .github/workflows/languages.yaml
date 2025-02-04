@@ -17,9 +17,9 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest]
         language: [python, pipenv]
-    
+
     runs-on: ${{ matrix.os }}
-    
+
     steps:
     - uses: actions/checkout@v3
     - uses: actions/setup-python@v4
@@ -34,6 +34,6 @@ jobs:
 
     - name: Run tests
       run: coverage run -m pytest tests/languages/${{ matrix.language }}_test.py
-    
+
     - name: Check coverage
       run: coverage report --include pre_commit/languages/${{ matrix.language }}.py,tests/languages/${{ matrix.language }}_test.py
