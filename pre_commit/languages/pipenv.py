@@ -17,11 +17,28 @@ ENVIRONMENT_DIR = 'pipenv_env'
 get_default_version = python.get_default_version
 
 
-def _assert_pipfile_exists(prefix: Prefix) -> None:
-    if not os.path.exists(os.path.join(prefix.prefix_dir, 'Pipfile')):
+def _find_pipfile(start_dir: str) -> str | None:
+    """Search for Pipfile starting from start_dir and moving up."""
+    current = os.path.abspath(start_dir)
+    while True:
+        pipfile = os.path.join(current, 'Pipfile')
+        if os.path.exists(pipfile):
+            return pipfile
+        parent = os.path.dirname(current)
+        if parent == current:  # Reached root directory
+            break
+        current = parent
+    return None
+
+
+def _assert_pipfile_exists(prefix: Prefix) -> str:
+    """Assert Pipfile exists and return its directory path."""
+    pipfile = _find_pipfile(prefix.prefix_dir)
+    if not pipfile:
         raise AssertionError(
             '`language: pipenv` requires a Pipfile in the repository',
         )
+    return os.path.dirname(pipfile)
 
 
 def _get_env_with_pipenv_settings() -> dict[str, str]:
@@ -39,23 +56,23 @@ def _ensure_virtualenv(prefix: Prefix, version: str) -> None:
             version if version != C.DEFAULT
             else f'{sys.version_info[0]}.{sys.version_info[1]}'
         )
+        pipfile_dir = _assert_pipfile_exists(prefix)
         cmd_output_b(
             'pipenv', '--python', python_version,
             env=_get_env_with_pipenv_settings(),
-            cwd=prefix.prefix_dir,
+            cwd=pipfile_dir,
         )
 
 
 def health_check(prefix: Prefix, version: str) -> str | None:
-    _assert_pipfile_exists(prefix)
-
     try:
+        pipfile_dir = _assert_pipfile_exists(prefix)
         _ensure_virtualenv(prefix, version)
         with in_env(prefix, version):
             cmd_output_b(
                 'pipenv', 'check',
                 env=_get_env_with_pipenv_settings(),
-                cwd=prefix.prefix_dir,
+                cwd=pipfile_dir,
             )
         return None
     except Exception as e:
@@ -75,7 +92,7 @@ def install_environment(
         version: str,
         additional_dependencies: Sequence[str],
 ) -> None:
-    _assert_pipfile_exists(prefix)
+    pipfile_dir = _assert_pipfile_exists(prefix)
     env = _get_env_with_pipenv_settings()
 
     _ensure_virtualenv(prefix, version)
@@ -85,7 +102,7 @@ def install_environment(
         cmd_output_b(
             'pipenv', 'install', '--dev',
             env=env,
-            cwd=prefix.prefix_dir,
+            cwd=pipfile_dir,
         )
 
         # Install additional dependencies if specified
@@ -93,7 +110,7 @@ def install_environment(
             cmd_output_b(
                 'pipenv', 'install', *additional_dependencies,
                 env=env,
-                cwd=prefix.prefix_dir,
+                cwd=pipfile_dir,
             )
 
 
@@ -109,6 +126,7 @@ def run_hook(
 ) -> tuple[int, bytes]:
     env = _get_env_with_pipenv_settings()
     cmd = ('pipenv', 'run', entry, *args)
+    pipfile_dir = _assert_pipfile_exists(prefix)
     with in_env(prefix, C.DEFAULT):
         if file_args:
             return lang_base.run_xargs(
@@ -118,5 +136,5 @@ def run_hook(
                 color=color,
             )
         else:
-            ret, stdout, _ = cmd_output_b(*cmd, env=env, cwd=prefix.prefix_dir)
+            ret, stdout, _ = cmd_output_b(*cmd, env=env, cwd=pipfile_dir)
             return ret, stdout
