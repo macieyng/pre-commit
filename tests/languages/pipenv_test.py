@@ -21,16 +21,6 @@ name = "pypi"
 '''
 
 
-@pytest.fixture
-def find_pipenv_env(tmp_path):
-    ret = tmp_path.joinpath('pipenv_env')
-    with mock.patch.object(
-        pipenv.lang_base, 'environment_dir',
-        return_value=str(ret),
-    ):
-        yield ret
-
-
 def test_health_check_with_pipfile(tmp_path):
     prefix = Prefix(str(tmp_path))
     pipfile = prefix.path('Pipfile')
