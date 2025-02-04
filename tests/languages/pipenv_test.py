@@ -73,7 +73,7 @@ def test_run_hook(tmp_path):
 
     assert ret == (0, b'Hello from pipenv!\n')
     cmd_output_b_mock.assert_called_once_with(
-        'pipenv', 'run', 'python', 'script.py',
+        'pipenv', 'run', 'python script.py',
         env=mock.ANY,
         cwd=prefix.prefix_dir,
     )
